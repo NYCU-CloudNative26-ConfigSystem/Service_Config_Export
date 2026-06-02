@@ -1,10 +1,18 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ExportServiceError, to_http_exception
-from app.routers.deps import CurrentUser, get_current_user
-from app.schemas.export import ConfigHistoryItem, DeployRequest, DeployResponse, ExportDownloadRequest, ExportPreviewResponse
+from app.routers.deps import CurrentUser, get_current_user, get_db
+from app.schemas.export import (
+    ConfigHistoryItem,
+    DeployLogOut,
+    DeployRequest,
+    DeployResponse,
+    ExportDownloadRequest,
+    ExportPreviewResponse,
+)
 from app.services.export_service import ExportService
 
 
@@ -87,12 +95,41 @@ async def deploy_config(
     payload: DeployRequest,
     svc: ExportService = Depends(_svc),
     current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    logger.info("Received deploy request: version_uuid=%s environment=%s", version_uuid, payload.environment)
+    logger.info("Received deploy request: version_uuid=%s environment=%s reason=%s", version_uuid, payload.environment, payload.reason)
     try:
-        result = await svc.deploy_config(version_uuid, payload.environment, payload.format, current_user.token)
+        result = await svc.deploy_config(
+            version_uuid=version_uuid,
+            proj_id=payload.proj_id,
+            cmp_id=payload.cmp_id,
+            environment=payload.environment,
+            fmt=payload.format,
+            reason=payload.reason,
+            deployed_by=current_user.username,
+            token=current_user.token,
+            session=db,
+        )
         return DeployResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ExportServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.get(
+    "/exports/deploy-history",
+    response_model=list[DeployLogOut],
+    summary="Get deploy history for a company's project",
+)
+async def get_deploy_history(
+    proj_id: str,
+    cmp_id: str,
+    svc: ExportService = Depends(_svc),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await svc.get_deploy_history(proj_id, cmp_id, db)
     except ExportServiceError as exc:
         raise to_http_exception(exc) from exc

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     github_deploy_token: str = ""
     github_repo_owner: str = ""
     github_repo_name: str = ""
+    database_url: str = "sqlite+aiosqlite:///:memory:"
 
 
 settings = Settings()

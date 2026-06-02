@@ -29,6 +29,7 @@ jobs:
         run: pip install -r requirements.txt && pytest tests/ -v
         env:
           SECRET_KEY: ${{ env.CI_SECRET_KEY }}
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
 
   build-push:
     name: Build & Push

@@ -1,11 +1,26 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
 import uvicorn
+from fastapi import FastAPI
 
 from app.core.config import settings
+from app.db.base import Base, make_engine, make_session_factory
+from app.db.models import DeployLog  # noqa: F401 — registers model with Base.metadata
 from app.routers.export import router as export_router
 
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    engine = make_engine(settings.database_url)
+    app.state.engine = engine
+    app.state.session_factory = make_session_factory(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    await engine.dispose()
+
+
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 
 @app.get("/health")

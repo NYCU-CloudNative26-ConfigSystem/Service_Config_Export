@@ -1,8 +1,10 @@
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import jwt
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import InvalidTokenError, MissingTokenError
@@ -39,3 +41,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials | None = De
     if not isinstance(role, str):
         raise InvalidTokenError()
     return CurrentUser(username=username, company=company, role=role, token=token)
+
+
+async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    async with request.app.state.session_factory() as session:
+        yield session

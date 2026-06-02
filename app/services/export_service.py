@@ -11,10 +11,13 @@ from urllib.parse import urlencode
 from typing import Any
 
 import httpx
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import InvalidTokenError, UpstreamServiceError
-from app.schemas.export import ConfigHistoryItem, ConfigReadResponse, ExportDocument, ExportDownloadRequest, ExportFormat
+from app.db.models import DeployLog
+from app.schemas.export import ConfigHistoryItem, ConfigReadResponse, DeployLogOut, ExportDocument, ExportDownloadRequest, ExportFormat
 from app.utils.formatters import render_export_document
 
 
@@ -185,7 +188,18 @@ class ExportService:
             raise UpstreamServiceError("Config service: snapshot payload is invalid")
         return ConfigReadResponse.model_validate(payload)
 
-    async def deploy_config(self, version_uuid: str, environment: str, fmt: ExportFormat, token: str) -> dict:
+    async def deploy_config(
+        self,
+        version_uuid: str,
+        proj_id: str,
+        cmp_id: str,
+        environment: str,
+        fmt: ExportFormat,
+        reason: str,
+        deployed_by: str,
+        token: str,
+        session: AsyncSession,
+    ) -> dict:
         snapshot = await self._fetch_snapshot_by_uuid(version_uuid, token)
         resolved = await self._resolve_snapshot_rows(snapshot, token)
         document = render_export_document(
@@ -226,9 +240,33 @@ class ExportService:
                     },
                 },
             )
+        status = "triggered" if r.is_success else "failed"
+        log = DeployLog(
+            version_uuid=version_uuid,
+            proj_id=proj_id,
+            cmp_id=cmp_id,
+            environment=environment,
+            format=fmt.value,
+            reason=reason,
+            deployed_by=deployed_by,
+            namespace=namespace,
+            status=status,
+        )
+        session.add(log)
+        await session.commit()
         if not r.is_success:
             raise UpstreamServiceError(f"GitHub API error {r.status_code}: {r.text}")
         return {"status": "triggered"}
+
+    async def get_deploy_history(self, proj_id: str, cmp_id: str, session: AsyncSession) -> list[DeployLogOut]:
+        result = await session.execute(
+            select(DeployLog)
+            .where(DeployLog.proj_id == proj_id, DeployLog.cmp_id == cmp_id)
+            .order_by(DeployLog.deployed_at.desc())
+            .limit(20)
+        )
+        rows = result.scalars().all()
+        return [DeployLogOut.model_validate(row) for row in rows]
 
     async def export_config(self, payload: ExportDownloadRequest, token: str) -> ExportDocument:
         if payload.version_uuid:

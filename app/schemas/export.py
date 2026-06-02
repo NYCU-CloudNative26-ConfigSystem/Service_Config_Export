@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ExportFormat(str, Enum):
@@ -75,7 +75,24 @@ class DeployRequest(BaseModel):
     cmp_id: str
     environment: str
     format: ExportFormat = ExportFormat.env
+    reason: str = Field(..., min_length=1, description="Reason for this deployment")
 
 
 class DeployResponse(BaseModel):
     status: str
+
+
+class DeployLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    version_uuid: str
+    proj_id: str
+    cmp_id: str
+    environment: str
+    format: str
+    reason: str
+    deployed_by: str
+    namespace: str
+    status: str
+    deployed_at: datetime
