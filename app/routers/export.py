@@ -1,10 +1,10 @@
 import logging
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.core.exceptions import ExportServiceError, to_http_exception
 from app.routers.deps import CurrentUser, get_current_user
-from app.schemas.export import ConfigHistoryItem, ExportDownloadRequest, ExportPreviewResponse
+from app.schemas.export import ConfigHistoryItem, DeployRequest, DeployResponse, ExportDownloadRequest, ExportPreviewResponse
 from app.services.export_service import ExportService
 
 
@@ -74,4 +74,25 @@ async def download_export(
         )
     except ExportServiceError as exc:
         logger.warning("Error occurred while exporting config: %s", exc)
+        raise to_http_exception(exc) from exc
+
+
+@router.post(
+    "/exports/deploy/{version_uuid}",
+    response_model=DeployResponse,
+    summary="Deploy an approved config snapshot to the dummy app via GitHub Actions",
+)
+async def deploy_config(
+    version_uuid: str,
+    payload: DeployRequest,
+    svc: ExportService = Depends(_svc),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    logger.info("Received deploy request: version_uuid=%s environment=%s", version_uuid, payload.environment)
+    try:
+        result = await svc.deploy_config(version_uuid, payload.environment, current_user.token)
+        return DeployResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ExportServiceError as exc:
         raise to_http_exception(exc) from exc

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import base64
 import logging
 from collections.abc import Mapping
 from collections import OrderedDict
+from datetime import datetime, timezone
 import json
 import re
 from urllib.parse import urlencode
@@ -179,6 +181,35 @@ class ExportService:
         if not isinstance(payload, Mapping):
             raise UpstreamServiceError("Config service: snapshot payload is invalid")
         return ConfigReadResponse.model_validate(payload)
+
+    async def deploy_config(self, version_uuid: str, environment: str, token: str) -> dict:
+        snapshot = await self._fetch_snapshot_by_uuid(version_uuid, token)
+        resolved = await self._resolve_snapshot_rows(snapshot, token)
+        payload_obj = {
+            "deployed_at": datetime.now(timezone.utc).isoformat(),
+            "environment": environment,
+            "version_uuid": version_uuid,
+            "config": resolved,
+        }
+        payload_b64 = base64.b64encode(json.dumps(payload_obj).encode()).decode()
+        owner = settings.github_repo_owner
+        repo = settings.github_repo_name
+        gh_token = settings.github_deploy_token
+        if not owner or not repo or not gh_token:
+            raise ValueError("GitHub deploy settings (GITHUB_REPO_OWNER, GITHUB_REPO_NAME, GITHUB_DEPLOY_TOKEN) are not configured")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"https://api.github.com/repos/{owner}/{repo}/dispatches",
+                headers={
+                    "Authorization": f"Bearer {gh_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+                json={"event_type": "deploy-config", "client_payload": {"payload_json": payload_b64}},
+            )
+        if not r.is_success:
+            raise UpstreamServiceError(f"GitHub API error {r.status_code}: {r.text}")
+        return {"status": "triggered"}
 
     async def export_config(self, payload: ExportDownloadRequest, token: str) -> ExportDocument:
         if payload.version_uuid:

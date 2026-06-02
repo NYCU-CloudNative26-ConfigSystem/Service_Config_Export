@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     config_service_url: str = "http://localhost:18001"
     ssot_service_url: str = "http://localhost:3000"
+    github_deploy_token: str = ""
+    github_repo_owner: str = ""
+    github_repo_name: str = ""
 
 
 settings = Settings()

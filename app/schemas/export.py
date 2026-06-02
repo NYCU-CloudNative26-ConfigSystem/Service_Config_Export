@@ -68,3 +68,13 @@ class ExportPreviewResponse(BaseModel):
     content: str
     format: str
     filename: str
+
+
+class DeployRequest(BaseModel):
+    proj_id: str
+    cmp_id: str
+    environment: str
+
+
+class DeployResponse(BaseModel):
+    status: str
