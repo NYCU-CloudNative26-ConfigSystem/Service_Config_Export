@@ -37,7 +37,7 @@ class ExportService:
         allow_not_found: bool = False,
     ) -> object | None:
         url = f"{base_url}{path}"
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(
                 url,
                 headers={"Authorization": f"Bearer {token}"},
@@ -152,13 +152,16 @@ class ExportService:
         return result
 
     async def _resolve_snapshot_rows(self, snapshot: ConfigReadResponse, token: str) -> OrderedDict[str, Any]:
+        import asyncio
         cache: dict[str, Mapping[str, Any] | None] = {}
-        resolved: OrderedDict[str, Any] = OrderedDict()
-        for row in snapshot.rows:
+
+        async def resolve_row(row):
             key_name = await self._resolve_name_uuid(row.key, token, cache)
             value = await self._resolve_value_ref(row.val, token, cache)
-            resolved[key_name] = value
-        return resolved
+            return key_name, value
+
+        pairs = await asyncio.gather(*[resolve_row(row) for row in snapshot.rows])
+        return OrderedDict(pairs)
 
     async def list_versions(self, proj_id: str, cmp_id: str, environment: str, token: str) -> list[ConfigHistoryItem]:
         logger.info("Fetching config history for proj_id=%s cmp_id=%s environment=%s", proj_id, cmp_id, environment)
