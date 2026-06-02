@@ -103,9 +103,9 @@ jobs:
             --from-literal=GMAIL_APP_PASSWORD="${{ secrets.GMAIL_APP_PASSWORD }}" \
             --from-literal=INTERNAL_API_KEY="${{ secrets.INTERNAL_API_KEY }}" \
             --from-literal=APP_BASE_URL="${{ secrets.APP_BASE_URL }}" \
-            --from-literal=GITHUB_DEPLOY_TOKEN="${{ secrets.GITHUB_DEPLOY_TOKEN }}" \
-            --from-literal=GITHUB_REPO_OWNER="${{ secrets.GITHUB_REPO_OWNER }}" \
-            --from-literal=GITHUB_REPO_NAME="${{ secrets.GITHUB_REPO_NAME }}" \
+            --from-literal=GITHUB_DEPLOY_TOKEN="${{ secrets.GH_DEPLOY_TOKEN }}" \
+            --from-literal=GITHUB_REPO_OWNER="${{ secrets.GH_REPO_OWNER }}" \
+            --from-literal=GITHUB_REPO_NAME="${{ secrets.GH_REPO_NAME }}" \
             --dry-run=client -o yaml | kubectl apply -f -
       - name: Check infra readiness
         run: |
@@ -165,9 +165,9 @@ jobs:
             --from-literal=GMAIL_APP_PASSWORD="${{ secrets.GMAIL_APP_PASSWORD }}" \
             --from-literal=INTERNAL_API_KEY="${{ secrets.INTERNAL_API_KEY }}" \
             --from-literal=APP_BASE_URL="${{ secrets.APP_BASE_URL }}" \
-            --from-literal=GITHUB_DEPLOY_TOKEN="${{ secrets.GITHUB_DEPLOY_TOKEN }}" \
-            --from-literal=GITHUB_REPO_OWNER="${{ secrets.GITHUB_REPO_OWNER }}" \
-            --from-literal=GITHUB_REPO_NAME="${{ secrets.GITHUB_REPO_NAME }}" \
+            --from-literal=GITHUB_DEPLOY_TOKEN="${{ secrets.GH_DEPLOY_TOKEN }}" \
+            --from-literal=GITHUB_REPO_OWNER="${{ secrets.GH_REPO_OWNER }}" \
+            --from-literal=GITHUB_REPO_NAME="${{ secrets.GH_REPO_NAME }}" \
             --dry-run=client -o yaml | kubectl apply -f -
       - name: Check infra readiness
         run: |
