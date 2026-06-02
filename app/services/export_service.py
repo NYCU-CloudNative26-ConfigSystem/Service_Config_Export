@@ -14,7 +14,7 @@ import httpx
 
 from app.core.config import settings
 from app.core.exceptions import InvalidTokenError, UpstreamServiceError
-from app.schemas.export import ConfigHistoryItem, ConfigReadResponse, ExportDocument, ExportDownloadRequest
+from app.schemas.export import ConfigHistoryItem, ConfigReadResponse, ExportDocument, ExportDownloadRequest, ExportFormat
 from app.utils.formatters import render_export_document
 
 
@@ -182,16 +182,23 @@ class ExportService:
             raise UpstreamServiceError("Config service: snapshot payload is invalid")
         return ConfigReadResponse.model_validate(payload)
 
-    async def deploy_config(self, version_uuid: str, environment: str, token: str) -> dict:
+    async def deploy_config(self, version_uuid: str, environment: str, fmt: ExportFormat, token: str) -> dict:
         snapshot = await self._fetch_snapshot_by_uuid(version_uuid, token)
         resolved = await self._resolve_snapshot_rows(snapshot, token)
-        payload_obj = {
+        document = render_export_document(
+            snapshot, fmt, None,
+            version_label=version_uuid[:8],
+            resolved_rows=resolved,
+        )
+        meta = {
             "deployed_at": datetime.now(timezone.utc).isoformat(),
             "environment": environment,
             "version_uuid": version_uuid,
-            "config": resolved,
+            "filename": document.filename,
+            "format": fmt.value,
         }
-        payload_b64 = base64.b64encode(json.dumps(payload_obj).encode()).decode()
+        file_b64 = base64.b64encode(document.content).decode()
+        meta_b64 = base64.b64encode(json.dumps(meta).encode()).decode()
         owner = settings.github_repo_owner
         repo = settings.github_repo_name
         gh_token = settings.github_deploy_token
@@ -205,7 +212,10 @@ class ExportService:
                     "Accept": "application/vnd.github+json",
                     "X-GitHub-Api-Version": "2022-11-28",
                 },
-                json={"event_type": "deploy-config", "client_payload": {"payload_json": payload_b64}},
+                json={"event_type": "deploy-config", "client_payload": {
+                    "file_b64": file_b64,
+                    "meta_b64": meta_b64,
+                }},
             )
         if not r.is_success:
             raise UpstreamServiceError(f"GitHub API error {r.status_code}: {r.text}")

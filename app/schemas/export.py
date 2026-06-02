@@ -74,6 +74,7 @@ class DeployRequest(BaseModel):
     proj_id: str
     cmp_id: str
     environment: str
+    format: ExportFormat = ExportFormat.env
 
 
 class DeployResponse(BaseModel):

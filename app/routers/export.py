@@ -90,7 +90,7 @@ async def deploy_config(
 ):
     logger.info("Received deploy request: version_uuid=%s environment=%s", version_uuid, payload.environment)
     try:
-        result = await svc.deploy_config(version_uuid, payload.environment, current_user.token)
+        result = await svc.deploy_config(version_uuid, payload.environment, payload.format, current_user.token)
         return DeployResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
