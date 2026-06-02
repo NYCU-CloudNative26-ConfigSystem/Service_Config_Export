@@ -207,24 +207,19 @@ class ExportService:
         gh_token = settings.github_deploy_token
         if not owner or not repo or not gh_token:
             raise ValueError("GitHub deploy settings (GITHUB_REPO_OWNER, GITHUB_REPO_NAME, GITHUB_DEPLOY_TOKEN) are not configured")
-        namespace = "config-system" if environment == "production" else "config-system-staging"
-        branch = "main" if environment == "production" else "dev"
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.post(
-                f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/deploy-config.yml/dispatches",
+                f"https://api.github.com/repos/{owner}/{repo}/dispatches",
                 headers={
                     "Authorization": f"Bearer {gh_token}",
                     "Accept": "application/vnd.github+json",
                     "X-GitHub-Api-Version": "2022-11-28",
                 },
-                json={
-                    "ref": branch,
-                    "inputs": {
-                        "file_b64": file_b64,
-                        "meta_b64": meta_b64,
-                        "namespace": namespace,
-                    },
-                },
+                json={"event_type": "deploy-config", "client_payload": {
+                    "file_b64": file_b64,
+                    "meta_b64": meta_b64,
+                    "namespace": "config-system" if environment == "production" else "config-system-staging",
+                }},
             )
         if not r.is_success:
             raise UpstreamServiceError(f"GitHub API error {r.status_code}: {r.text}")
