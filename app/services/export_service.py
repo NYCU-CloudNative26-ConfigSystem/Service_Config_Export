@@ -215,6 +215,7 @@ class ExportService:
                 json={"event_type": "deploy-config", "client_payload": {
                     "file_b64": file_b64,
                     "meta_b64": meta_b64,
+                    "namespace": "config-system" if environment == "production" else "config-system-staging",
                 }},
             )
         if not r.is_success:
