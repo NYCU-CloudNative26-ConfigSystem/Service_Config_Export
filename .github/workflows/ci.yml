@@ -67,6 +67,7 @@ jobs:
     environment: staging
     env:
       K8S_NAMESPACE: config-system-staging
+      REPLICAS: "1"
     permissions:
       contents: read
       id-token: write
@@ -118,7 +119,7 @@ jobs:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
           export IMAGE_CONFIG_EXPORT="${GAR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GAR_REPO}/config-export:${GITHUB_SHA}"
-          envsubst '${IMAGE_CONFIG_EXPORT}${K8S_NAMESPACE}' < infra/k8s/services/config-export.yaml | kubectl apply -f -
+          envsubst '${IMAGE_CONFIG_EXPORT}${K8S_NAMESPACE}${REPLICAS}' < infra/k8s/services/config-export.yaml | kubectl apply -f -
           kubectl rollout status deployment/service-config-export -n "${K8S_NAMESPACE}" --timeout=600s
 
   deploy-production:
@@ -129,6 +130,7 @@ jobs:
     environment: production
     env:
       K8S_NAMESPACE: config-system
+      REPLICAS: "2"
     permissions:
       contents: read
       id-token: write
@@ -180,5 +182,5 @@ jobs:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
           export IMAGE_CONFIG_EXPORT="${GAR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GAR_REPO}/config-export:${GITHUB_SHA}"
-          envsubst '${IMAGE_CONFIG_EXPORT}${K8S_NAMESPACE}' < infra/k8s/services/config-export.yaml | kubectl apply -f -
+          envsubst '${IMAGE_CONFIG_EXPORT}${K8S_NAMESPACE}${REPLICAS}' < infra/k8s/services/config-export.yaml | kubectl apply -f -
           kubectl rollout status deployment/service-config-export -n "${K8S_NAMESPACE}" --timeout=600s
