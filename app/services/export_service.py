@@ -196,6 +196,7 @@ class ExportService:
         environment: str,
         fmt: ExportFormat,
         reason: str,
+        snapshot_name: str,
         deployed_by: str,
         token: str,
         session: AsyncSession,
@@ -243,6 +244,7 @@ class ExportService:
         status = "triggered" if r.is_success else "failed"
         log = DeployLog(
             version_uuid=version_uuid,
+            snapshot_name=snapshot_name,
             proj_id=proj_id,
             cmp_id=cmp_id,
             environment=environment,

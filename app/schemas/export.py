@@ -76,6 +76,7 @@ class DeployRequest(BaseModel):
     environment: str
     format: ExportFormat = ExportFormat.env
     reason: str = Field(..., min_length=1, description="Reason for this deployment")
+    snapshot_name: str = Field("", description="Human-readable snapshot name")
 
 
 class DeployResponse(BaseModel):
@@ -87,6 +88,7 @@ class DeployLogOut(BaseModel):
 
     id: int
     version_uuid: str
+    snapshot_name: str
     proj_id: str
     cmp_id: str
     environment: str

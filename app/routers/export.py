@@ -106,6 +106,7 @@ async def deploy_config(
             environment=payload.environment,
             fmt=payload.format,
             reason=payload.reason,
+            snapshot_name=payload.snapshot_name,
             deployed_by=current_user.username,
             token=current_user.token,
             session=db,

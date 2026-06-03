@@ -12,6 +12,7 @@ class DeployLog(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     version_uuid: Mapped[str] = mapped_column(String(64))
+    snapshot_name: Mapped[str] = mapped_column(String(256), default="", server_default="")
     proj_id: Mapped[str] = mapped_column(String(64))
     cmp_id: Mapped[str] = mapped_column(String(64))
     environment: Mapped[str] = mapped_column(String(64))
