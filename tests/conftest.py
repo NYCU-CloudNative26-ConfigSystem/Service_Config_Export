@@ -45,3 +45,9 @@ async def auth_token() -> str:
 @pytest_asyncio.fixture()
 async def auth_headers(auth_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {auth_token}"}
+
+
+@pytest_asyncio.fixture()
+async def db_session(_setup_db):
+    async with app.state.session_factory() as session:
+        yield session

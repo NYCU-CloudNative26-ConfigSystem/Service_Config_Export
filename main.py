@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.exceptions import ExportServiceError
 from app.db.base import Base, make_engine, make_session_factory
 from app.db.models import DeployLog  # noqa: F401 — registers model with Base.metadata
 from app.routers.export import router as export_router
@@ -21,6 +23,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+
+
+@app.exception_handler(ExportServiceError)
+async def export_service_error_handler(request: Request, exc: ExportServiceError) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 @app.get("/health")
